@@ -28,7 +28,7 @@ from pathlib import Path
 import numpy as np
 import torch
 from tqdm import tqdm
-
+import pandas as pd
 FILE = Path(__file__).resolve()
 ROOT = FILE.parents[0]  # YOLOv5 root directory
 if str(ROOT) not in sys.path:
@@ -44,7 +44,21 @@ from utils.general import (LOGGER, TQDM_BAR_FORMAT, Profile, check_dataset, chec
 from utils.metrics import ConfusionMatrix, ap_per_class, box_iou
 from utils.plots import output_to_target, plot_images, plot_val_study
 from utils.torch_utils import select_device, smart_inference_mode
+import matplotlib.pyplot as plt
+import matplotlib
 
+import seaborn as sns
+
+matplotlib.rcParams['font.family'] ='Malgun Gothic'
+
+matplotlib.rcParams['axes.unicode_minus'] =False
+import matplotlib.font_manager as fm
+import matplotlib.pyplot as plt
+
+# 설치된 폰트 출력
+plt.rcParams['axes.unicode_minus'] = False
+plt.rcParams['font.family'] = 'Malgun Gothic'
+font_list = [font.name for font in fm.fontManager.ttflist]
 
 def save_one_txt(predn, save_conf, shape, file):
     # Save one txt result
@@ -228,7 +242,10 @@ def run(
         for si, pred in enumerate(preds):
             labels = targets[targets[:, 0] == si, 1:]
             nl, npr = labels.shape[0], pred.shape[0]  # number of labels, predictions
+            # print(nl)
+            # print(npr)
             path, shape = Path(paths[si]), shapes[si][0]
+            # print(path)
             correct = torch.zeros(npr, niou, dtype=torch.bool, device=device)  # init
             seen += 1
 
@@ -254,6 +271,7 @@ def run(
                 if plots:
                     confusion_matrix.process_batch(predn, labelsn)
             stats.append((correct, pred[:, 4], pred[:, 5], labels[:, 0]))  # (correct, conf, pcls, tcls)
+            # pd.DataFrame(stats).to_csv('C:\\Users\\user\\Desktop\\NIA_최종데이터_1207\\yolov5\\runs\\stats.csv',index=True)
 
             # Save/log
             if save_txt:
@@ -274,8 +292,14 @@ def run(
     if len(stats) and stats[0].any():
         tp, fp, p, r, f1, ap, ap_class = ap_per_class(*stats, plot=plots, save_dir=save_dir, names=names)
         ap50, ap = ap[:, 0], ap.mean(1)  # AP@0.5, AP@0.5:0.95
-        mp, mr, map50, map = p.mean(), r.mean(), ap50.mean(), ap.mean()
+        mp, mr, map50, map = p.mean(), r.mean(), ap50.mean(), ap.mean() # 
     nt = np.bincount(stats[3].astype(int), minlength=nc)  # number of targets per class
+    
+    # import csv
+    # f = open('C:\\Users\\user\\Desktop\\NIA_최종데이터_1207\\yolov5\\runs\\output.csv', 'w', encoding='utf-8', newline='')
+    # wr = csv.writer(f)
+    # wr.writerow([tp, fp, p, r, f1, ap, ap_class])
+    # f.close()
 
     # Print results
     pf = '%22s' + '%11i' * 2 + '%11.3g' * 4  # print format
@@ -295,7 +319,8 @@ def run(
         LOGGER.info(f'Speed: %.1fms pre-process, %.1fms inference, %.1fms NMS per image at shape {shape}' % t)
 
     # Plots
-    if plots:
+    # if plots:
+    if True:
         confusion_matrix.plot(save_dir=save_dir, names=list(names.values()))
         callbacks.run('on_val_end', nt, tp, fp, p, r, f1, ap, ap50, ap_class, confusion_matrix)
 

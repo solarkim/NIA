@@ -24,6 +24,21 @@ import time
 from copy import deepcopy
 from datetime import datetime
 from pathlib import Path
+import os
+os.environ['KMP_DUPLICATE_LIB_OK']='True'
+
+import seaborn as sns
+import matplotlib.pyplot as plt
+import matplotlib
+
+
+import matplotlib.font_manager as fm
+import matplotlib.pyplot as plt
+
+# 설치된 폰트 출력
+plt.rcParams['axes.unicode_minus'] = False
+plt.rcParams['font.family'] = 'Malgun Gothic'
+font_list = [font.name for font in fm.fontManager.ttflist]
 
 import numpy as np
 import torch
@@ -60,11 +75,57 @@ from utils.plots import plot_evolve
 from utils.torch_utils import (EarlyStopping, ModelEMA, de_parallel, select_device, smart_DDP, smart_optimizer,
                                smart_resume, torch_distributed_zero_first)
 
+# import comet_ml at the top of your file
+# # Import comet_ml at the top of your file
+# from comet_ml import Experiment
+
+# # Create an experiment with your api key
+# experiment = Experiment(
+#     api_key="WoGKEPIJRzCJA5Td5kAM7EPdm",
+#     project_name="yolov5",
+#     workspace="solarkim",
+# )
+
+# # Report multiple hyperparameters using a dictionary:
+# hyper_params = {
+#     "learning_rate": 0.5,
+#     "steps": 100000,
+#     "batch_size": 50,
+# }
+# experiment.log_parameters(hyper_params)
+
+# # Or report single hyperparameters:
+# hidden_layer_size = 50
+# experiment.log_parameter("hidden_layer_size", hidden_layer_size)
+
+# # Long any time-series metrics:
+# train_accuracy = 3.14
+# experiment.log_metric("accuracy", train_accuracy, step=0)
+
+
+# import wandb
+import os
+# import comet_ml
+# comet_ml.init(project_name='taeyang-yolov5',workspace='taeyang')
+
+
+
+# wandb.init(project="test-yolo", entity="taeyangs")
+# api = wandb.Api()
+
+# wandb.init()
+# wandb login --relogin
+# os.environ["WANDB_BASE_URL"]="http://api.wandb.ai"
+# wandb.init()
+# with wandb.init(entity="repro", project="farmhannong", mode="offline") as run:
+#     for i in range(5):
+#         run.log({"metric":i})
+
 LOCAL_RANK = int(os.getenv('LOCAL_RANK', -1))  # https://pytorch.org/docs/stable/elastic/run.html
 RANK = int(os.getenv('RANK', -1))
 WORLD_SIZE = int(os.getenv('WORLD_SIZE', 1))
 GIT_INFO = check_git_info()
-
+# wandb.config.update(args)
 
 def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictionary
     save_dir, epochs, batch_size, weights, single_cls, evolve, data, cfg, resume, noval, nosave, workers, freeze = \
@@ -122,6 +183,7 @@ def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictio
             weights = attempt_download(weights)  # download if not found locally
         ckpt = torch.load(weights, map_location='cpu')  # load checkpoint to CPU to avoid CUDA memory leak
         model = Model(cfg or ckpt['model'].yaml, ch=3, nc=nc, anchors=hyp.get('anchors')).to(device)  # create
+        # wandb.watch(model)
         exclude = ['anchor'] if (cfg or hyp.get('anchors')) and not resume else []  # exclude keys
         csd = ckpt['model'].float().state_dict()  # checkpoint state_dict as FP32
         csd = intersect_dicts(csd, model.state_dict(), exclude=exclude)  # intersect
@@ -190,7 +252,7 @@ def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictio
                                               gs,
                                               single_cls,
                                               hyp=hyp,
-                                              augment=True,
+                                              augment=False,
                                               cache=None if opt.cache == 'val' else opt.cache,
                                               rect=opt.rect,
                                               rank=LOCAL_RANK,

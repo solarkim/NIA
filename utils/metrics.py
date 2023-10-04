@@ -12,7 +12,7 @@ import numpy as np
 import torch
 
 from utils import TryExcept, threaded
-
+import pandas as pd
 
 def fitness(x):
     # Model fitness as a weighted combination of metrics
@@ -41,11 +41,15 @@ def ap_per_class(tp, conf, pred_cls, target_cls, plot=False, save_dir='.', names
     # Returns
         The average precision as computed in py-faster-rcnn.
     """
+    # [sun]
+    # print(pred_cls.shape)
+    pd.DataFrame(pred_cls).to_csv('C:\\Users\\user\\Desktop\\NIA_최종데이터_1207\\yolov5\\runs\\pred_cls.csv',index=True)
+    pd.DataFrame(target_cls).to_csv('C:\\Users\\user\\Desktop\\NIA_최종데이터_1207\\yolov5\\runs\\target_cls.csv',index=True)
 
     # Sort by objectness
     i = np.argsort(-conf)
     tp, conf, pred_cls = tp[i], conf[i], pred_cls[i]
-
+    
     # Find unique classes
     unique_classes, nt = np.unique(target_cls, return_counts=True)
     nc = unique_classes.shape[0]  # number of classes, number of detections
@@ -57,6 +61,9 @@ def ap_per_class(tp, conf, pred_cls, target_cls, plot=False, save_dir='.', names
         i = pred_cls == c
         n_l = nt[ci]  # number of labels
         n_p = i.sum()  # number of predictions
+        # print(ci)
+        # print(n_l)
+        # print(n_p)
         if n_p == 0 or n_l == 0:
             continue
 
@@ -71,13 +78,32 @@ def ap_per_class(tp, conf, pred_cls, target_cls, plot=False, save_dir='.', names
         # Precision
         precision = tpc / (tpc + fpc)  # precision curve
         p[ci] = np.interp(-px, -conf[i], precision[:, 0], left=1)  # p at pr_score
+        
+        # pd.DataFrame(fpc).to_csv('C:\\Users\\user\\Desktop\\NIA_최종데이터_1207\\yolov5\\runs\\fpc'+str(c)+'.csv',index=False)
+        # pd.DataFrame(tpc).to_csv('C:\\Users\\user\\Desktop\\NIA_최종데이터_1207\\yolov5\\runs\\tpc'+str(c)+'.csv',index=False)
+        
+        pd.DataFrame(precision).to_csv('C:\\Users\\user\\Desktop\\NIA_최종데이터_1207\\yolov5\\runs\\precision'+str(c)+'.csv',index=False)
+        pd.DataFrame(recall).to_csv('C:\\Users\\user\\Desktop\\NIA_최종데이터_1207\\yolov5\\runs\\recall'+str(c)+'.csv',index=False)
+        
+        # import csv
+        # f = open('C:\\Users\\user\\Desktop\\NIA_최종데이터_1207\\yolov5\\runs\\output.csv', 'w', encoding='utf-8', newline='')
+        # wr = csv.writer(f)
+        
+        # wr.writerow([tp[i], precision[i,0], recall[i,0]])
+        # f.close()
 
         # AP from recall-precision curve
+        # print(tp.shape)
         for j in range(tp.shape[1]):
             ap[ci, j], mpre, mrec = compute_ap(recall[:, j], precision[:, j])
             if plot and j == 0:
                 py.append(np.interp(px, mrec, mpre))  # precision at mAP@0.5
-
+        
+        # pd.DataFrame(tp).to_csv('C:\\Users\\user\\Desktop\\NIA_최종데이터_1207\\yolov5\\runs\\tp'+str(c)+'.csv',index=False)
+        pd.DataFrame(mpre).to_csv('C:\\Users\\user\\Desktop\\NIA_최종데이터_1207\\yolov5\\runs\\mpre'+str(c)+'.csv',index=False)
+        pd.DataFrame(mrec).to_csv('C:\\Users\\user\\Desktop\\NIA_최종데이터_1207\\yolov5\\runs\\mre'+str(c)+'.csv',index=False)
+        pd.DataFrame(ap).to_csv('C:\\Users\\user\\Desktop\\NIA_최종데이터_1207\\yolov5\\runs\\ap'+str(c)+'.csv',index=False)
+        
     # Compute F1 (harmonic mean of precision and recall)
     f1 = 2 * p * r / (p + r + eps)
     names = [v for k, v in names.items() if k in unique_classes]  # list: only classes that have data
@@ -87,11 +113,13 @@ def ap_per_class(tp, conf, pred_cls, target_cls, plot=False, save_dir='.', names
         plot_mc_curve(px, f1, Path(save_dir) / f'{prefix}F1_curve.png', names, ylabel='F1')
         plot_mc_curve(px, p, Path(save_dir) / f'{prefix}P_curve.png', names, ylabel='Precision')
         plot_mc_curve(px, r, Path(save_dir) / f'{prefix}R_curve.png', names, ylabel='Recall')
-
+    pd.DataFrame(p).to_csv('C:\\Users\\user\\Desktop\\NIA_최종데이터_1207\\yolov5\\runs\\pi.csv',index=False)
+    pd.DataFrame(r).to_csv('C:\\Users\\user\\Desktop\\NIA_최종데이터_1207\\yolov5\\runs\\ri.csv',index=False)
     i = smooth(f1.mean(0), 0.1).argmax()  # max F1 index
     p, r, f1 = p[:, i], r[:, i], f1[:, i]
     tp = (r * nt).round()  # true positives
     fp = (tp / (p + eps) - tp).round()  # false positives
+    
     return tp, fp, p, r, f1, ap, unique_classes.astype(int)
 
 
